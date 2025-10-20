@@ -118,7 +118,7 @@ def main(
     )
 
     total_alert = telemetry_alert + command_alert
-    if total_alert.size > 0:
+    if total_alert:
         email_config = EmailConfig.from_config(config)
         send_email(email_config, 'Downlinked Telemetry Alert', total_alert)
 
