@@ -1,4 +1,5 @@
 import argparse
+from datetime import datetime, timezone
 import os
 from pathlib import Path
 import re
@@ -13,13 +14,17 @@ EMPTY_TABLE_REGEX = re.compile(r"No data available")
 
 
 def run_scraper(playwright: Playwright, download_directory: str) -> None:
+    extraction_start_timestamp = int(datetime.now(timezone.utc).timestamp())
+    downloads_path = Path(download_directory)
     chromium = playwright.chromium
-    browser = chromium.launch(downloads_path=Path(download_directory), headless=False)
+    browser = chromium.launch(downloads_path=downloads_path / "tmp", headless=False)
     data_extractor = browser.new_page()
     data_extractor.goto(DATA_EXTRACTOR_ADDRESS)
 
     load_dotenv()
-    data_extractor.get_by_role("textbox", name="Password").fill(os.getenv("HEADI_COSMOS_PASSWORD"))
+    data_extractor.get_by_role("textbox", name="Password").fill(
+        os.getenv("HEADI_COSMOS_PASSWORD")
+    )
     data_extractor.get_by_role("button", name="Login").click()
 
     telemetry_radio = data_extractor.get_by_role("radio", name="Telemetry")
@@ -91,6 +96,10 @@ def run_scraper(playwright: Playwright, download_directory: str) -> None:
     for target in targets:
         target.click(force=True)
 
+        # Need to wait for packets to load in
+        selected_packet = data_extractor.get_by_role("textbox", name="Select Packet")
+        expect(selected_packet).to_have_value("[ ALL ]")
+
         packet_box.click()
         first_packet = data_extractor.get_by_role("option").first
         expect(first_packet).to_be_visible()
@@ -122,7 +131,12 @@ def run_scraper(playwright: Playwright, download_directory: str) -> None:
         expect(first_target).to_be_visible()
         first_target.scroll_into_view_if_needed()  # Forces stability check
 
-    # ZZZ - HANDLE RENAMING DOWNLOADS
+    downloaded_files = os.listdir(downloads_path / "tmp")
+    for idx, downloaded_file_name in enumerate(downloaded_files):
+        old_file_path = downloads_path / "tmp" / downloaded_file_name
+        new_file_name = f"extracted_{extraction_start_timestamp}_{idx}.txt"
+        new_file_path = downloads_path / new_file_name
+        old_file_path.rename(new_file_path)
 
     browser.close()
 
