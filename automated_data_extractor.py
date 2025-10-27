@@ -1,7 +1,9 @@
 import argparse
+import os
 from pathlib import Path
 import re
 
+from dotenv import load_dotenv
 from playwright.sync_api import sync_playwright, Playwright, expect
 
 TEST_ID_ATTRIBUTE = "data-test"
@@ -16,8 +18,8 @@ def run_scraper(playwright: Playwright, download_directory: str) -> None:
     data_extractor = browser.new_page()
     data_extractor.goto(DATA_EXTRACTOR_ADDRESS)
 
-    # ZZZ - Replace hard-coded password with .env
-    data_extractor.get_by_role("textbox", name="Password").fill("Password")
+    load_dotenv()
+    data_extractor.get_by_role("textbox", name="Password").fill(os.getenv("HEADI_COSMOS_PASSWORD"))
     data_extractor.get_by_role("button", name="Login").click()
 
     telemetry_radio = data_extractor.get_by_role("radio", name="Telemetry")
